@@ -277,6 +277,32 @@ dl{margin:0}
 .trooms button[aria-current="true"]{background:var(--bronze);border-color:var(--bronze);color:var(--green-900)}
 @media (max-width:820px){.tmap{width:96px;top:8px;left:8px}.thint{display:none}}
 #panoModal{background:#0d1411}
+.phead{display:flex;align-items:center;gap:8px;padding:10px 10px 0 18px}
+.phead .crumbs{flex:1;min-width:0;padding:4px 0 0}
+.ptog{flex:none;display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border-radius:10px;border:1px solid var(--line);font-size:12px;color:var(--cream-dim);white-space:nowrap}
+.ptog:hover{border-color:var(--bronze);color:var(--cream)}
+.ptog svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;transition:transform .25s}
+.panel.min .ptog svg{transform:rotate(180deg)}
+.panel{transition:max-height .3s ease}
+.panel.min{bottom:auto}
+.panel.min .pbody{display:none}
+.panel.min .phead{padding-bottom:10px}
+.blist.simple{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.blist.simple button{padding:14px 0;border-radius:12px;border:1px solid var(--line);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:2px;background:rgba(242,235,221,.03)}
+.blist.simple button b{font-family:var(--font-display);font-size:24px;font-weight:600;color:var(--bronze-soft);line-height:1}
+.blist.simple button:hover,.blist.simple button.hot{border-color:var(--bronze);background:rgba(196,154,108,.12)}
+.pin .chip.only{padding:6px 14px;font-size:13px}
+.rlabel.compact{padding:3px 8px;border-radius:8px;background:rgba(23,41,33,.72)}
+.rlabel.compact strong{font-size:11px}
+.rlabel.compact span{font-size:13px;font-family:inherit;line-height:1.2}
+.tcrumbs{display:flex;flex-wrap:wrap;gap:2px;align-items:center;font-size:12px;color:var(--cream-dim);margin-top:4px}
+.tcrumbs button{padding:3px 7px;border-radius:7px;border:1px solid transparent}
+.tcrumbs button:hover{border-color:var(--line);color:var(--cream)}
+.tcrumbs .sep{opacity:.4}
+.tback{display:inline-flex;align-items:center;gap:6px;height:42px;padding:0 14px;border-radius:12px;border:1px solid var(--line);font-size:13px;white-space:nowrap}
+.tback:hover{border-color:var(--bronze)}
+@media (max-width:820px){.phead{padding:4px 10px 0 14px}.blist.simple button{padding:10px 0}.tback span{display:none}.tback{padding:0 12px}}
+@media (min-width:821px){.panel{bottom:auto;max-height:calc(100% - 92px - env(safe-area-inset-top,0px))}}
 </style>
 
 <div id="app">
@@ -310,7 +336,7 @@ dl{margin:0}
 
   <aside class="panel" id="panel" aria-live="polite">
     <div class="grab" id="grab"></div>
-    <div class="crumbs" id="crumbs"></div>
+    <div class="phead"><div class="crumbs" id="crumbs"></div><button class="ptog" id="ptog" type="button" aria-expanded="true"><span id="ptogT">إخفاء</span><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button></div>
     <div class="pbody" id="pbody"></div>
   </aside>
 
@@ -327,7 +353,7 @@ dl{margin:0}
   </div>
 
   <div class="modal" id="panoModal" hidden>
-    <div class="mhead"><div class="grow"><h3 id="tTitle">جولة 360° داخل الشقة</h3><small>جولة بانورامية كاملة · اسحب في كل الاتجاهات · اضغط على الأسهم للانتقال بين الغرف</small></div><button class="x" id="panoClose" type="button" aria-label="إغلاق">×</button></div>
+    <div class="mhead"><div class="grow"><h3 id="tTitle">جولة 360° داخل الشقة</h3><nav class="tcrumbs" id="tCrumbs" aria-label="التنقل"></nav></div><button class="tback" id="panoClose" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg><span>الرجوع للشقة</span></button></div>
     <div class="tstage"><canvas id="pano"></canvas><div id="tHot"></div><div class="tload" id="tLoad" hidden></div>
       <div class="tmap" id="tMap"><img src="assets/plan.jpg" alt="مخطط الشقة"></div>
       <div class="thint" id="tHint">اسحب للنظر 360° · لأعلى للسقف ولأسفل للأرض</div>
@@ -362,6 +388,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 const $=s=>document.querySelector(s);
 const setProg=(p,s)=>{$('#loadP').style.width=(p*100)+'%';if(s)$('#loadS').textContent=s};
@@ -435,10 +462,10 @@ const sun=new THREE.DirectionalLight(0xfff1dc,3);sun.castShadow=true;
 sun.shadow.mapSize.set(isMobile?2048:4096,isMobile?2048:4096);sun.shadow.bias=-.0003;sun.shadow.normalBias=.035;sun.shadow.radius=2.5;
 scene.add(sun,sun.target);
 const hemi=new THREE.HemisphereLight(0xdce6ee,0xb08f64,.4);scene.add(hemi);
-const pmrem=new THREE.PMREMGenerator(renderer);let envRT=null;
+const pmrem=new THREE.PMREMGenerator(renderer);let envRT=null;const roomEnv=pmrem.fromScene(new RoomEnvironment(),.04).texture;
 const SUN=new THREE.Vector3();let dusk=false;
-const U={dusk:{value:0},band:{value:new THREE.Vector2(-999,-998)}};
-const BG_INSIDE=new THREE.Color('#ece6db');
+const U={dusk:{value:0},band:{value:new THREE.Vector2(-999,-998)},cutY:{value:1e9},cutB:{value:new THREE.Vector4()}};
+const BG_INSIDE=new THREE.Color('#1b2620');
 function setLighting(){
   const elev=dusk?3:24,az=200;SUN.setFromSphericalCoords(1,THREE.MathUtils.degToRad(90-elev),THREE.MathUtils.degToRad(az));
   for(const s of [sky,sky2]){const u=s.material.uniforms;u.sunPosition.value.copy(SUN);u.turbidity.value=dusk?9:5;u.rayleigh.value=dusk?3:1.3;u.mieCoefficient.value=dusk?.008:.003;u.mieDirectionalG.value=.85}
@@ -476,10 +503,10 @@ M.glass.onBeforeCompile=sh=>{sh.uniforms.uDusk=U.dusk;
   sh.fragmentShader='varying vec3 vWP;uniform float uDusk;\n'+sh.fragmentShader.replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\nvec3 cell=floor(vec3(vWP.x/2.6,vWP.y/3.7,vWP.z/2.6));float hsh=fract(sin(dot(cell,vec3(12.9898,78.233,37.719)))*43758.5453);totalEmissiveRadiance+=uDusk*step(.62,hsh)*vec3(1.0,.66,.36)*.9;');};
 M.glass.customProgramCacheKey=()=>'mk-glass';
 // floor hover band, like the original explorer: tints everything between two heights
-function withBand(m){const prev=m.onBeforeCompile;m.onBeforeCompile=(sh,r)=>{if(prev)prev(sh,r);sh.uniforms.uBand=U.band;
+function withBand(m){const prev=m.onBeforeCompile;m.onBeforeCompile=(sh,r)=>{if(prev)prev(sh,r);sh.uniforms.uBand=U.band;sh.uniforms.uCutY=U.cutY;sh.uniforms.uCutB=U.cutB;
   if(!sh.vertexShader.includes('vWP;'))sh.vertexShader='varying vec3 vWP;\n'+sh.vertexShader.replace('#include <worldpos_vertex>','#include <worldpos_vertex>\nvWP=(modelMatrix*vec4(transformed,1.0)).xyz;');
   if(!sh.fragmentShader.includes('varying vec3 vWP'))sh.fragmentShader='varying vec3 vWP;\n'+sh.fragmentShader;
-  sh.fragmentShader='uniform vec2 uBand;\n'+sh.fragmentShader.replace('#include <dithering_fragment>','#include <dithering_fragment>\nfloat inB=step(uBand.x,vWP.y)*step(vWP.y,uBand.y);gl_FragColor.rgb=mix(gl_FragColor.rgb,vec3(.86,.62,.34),inB*.55);');};
+  sh.fragmentShader='uniform vec2 uBand;uniform float uCutY;uniform vec4 uCutB;\n'+sh.fragmentShader.replace('void main() {','void main() {\nif(vWP.y>uCutY&&vWP.x>uCutB.x&&vWP.x<uCutB.y&&vWP.z>uCutB.z&&vWP.z<uCutB.w)discard;').replace('#include <dithering_fragment>','#include <dithering_fragment>\nfloat inB=step(uBand.x,vWP.y)*step(vWP.y,uBand.y);gl_FragColor.rgb=mix(gl_FragColor.rgb,vec3(.86,.62,.34),inB*.55);');};
   const k=m.customProgramCacheKey?m.customProgramCacheKey():'';m.customProgramCacheKey=()=>k+'-band';return m}
 ['stone','roof','bronze','darkMetal','glass'].forEach(k=>withBand(M[k]));
 
@@ -572,7 +599,8 @@ composer.addPass(new OutputPass());
 
 function resize(){const w=canvas.clientWidth,h=canvas.clientHeight;renderer.setSize(w,h,false);composer.setSize(w,h);camera.aspect=w/h;
   const pn=$('#panel').getBoundingClientRect();
-  if(w>820)camera.setViewOffset(w,h,Math.round((pn.width+16)/2),0,w,h);else camera.setViewOffset(w,h,0,Math.round(Math.min(pn.height,h*.48)/2.4),w,h);
+  const shut=$('#panel').classList.contains('min');
+  if(w>820)camera.setViewOffset(w,h,shut?0:Math.round((pn.width+16)/2),0,w,h);else camera.setViewOffset(w,h,0,Math.round(Math.min(pn.height,h*.48)/2.4),w,h);
   camera.updateProjectionMatrix()}
 addEventListener('resize',resize);
 
@@ -585,8 +613,87 @@ function resetCamera(){
   if(st.stage==='complex'){if(st.street){fly(new THREE.Vector3(25,1.8,30),new THREE.Vector3(48,6,-5),1700);return}fly(SITE_C.clone().add(new THREE.Vector3(128,92,145)),SITE_C)}
   else if(st.stage==='building'){const c=centerOf(st.b);fly(c.clone().add(new THREE.Vector3(14,13,faceOf(st.b)*70)),c,1700)}
   else if(st.stage==='floor'){const c=centerOf(st.b),t=new THREE.Vector3(c.x,st.f*FH+.15,c.z);fly(t.clone().add(top?new THREE.Vector3(0,80,.01):new THREE.Vector3(27,40,32*faceOf(st.b))),t)}
-  else{const t=new THREE.Vector3(4,.3,-6.1);fly(t.clone().add(top?new THREE.Vector3(0,30,.01):new THREE.Vector3(14,18,21)),t)}
+  else{const t=new THREE.Vector3(3.9,.3,-6.1);fly(t.clone().add(top?new THREE.Vector3(0,isMobile?24:19,.01):new THREE.Vector3(10.5,14,15.5).multiplyScalar(isMobile?1.3:1)),t)}
 }
+
+/* ───────────────────────── furnished unit (cutaway "dollhouse" view) ───────────────────────── */
+function woodTex(){const S=512;const [c,x]=cnv(S,S);const pw=S/8;for(let i=0;i<8;i++)for(let k=-1;k<3;k++){const off=(i%2)*S/4,v=150+Math.random()*30;x.fillStyle=`rgb(${v+22},${v-8},${v-46})`;x.fillRect(i*pw,k*S/2+off,pw,S/2);x.fillStyle='rgba(60,35,15,.35)';x.fillRect(i*pw,k*S/2+off,1.5,S/2);x.fillRect(i*pw,k*S/2+off,pw,1.5)}
+  for(let i=0;i<260;i++){x.strokeStyle=`rgba(90,55,25,${Math.random()*.12})`;x.lineWidth=1;const xx=Math.random()*S;x.beginPath();x.moveTo(xx,0);x.bezierCurveTo(xx+4,S/3,xx-4,S*2/3,xx+2,S);x.stroke()}noise(x,S,S,10);return tex(c)}
+const CUT_H=1.32;let interiorMats=null;
+function interiorKit(){if(interiorMats)return interiorMats;
+  const sm=(color,rough=.8,o={})=>new THREE.MeshStandardMaterial(Object.assign({color,roughness:rough,envMapIntensity:.55},o));
+  const trav=stone.map.clone();trav.repeat.set(.9,.9);trav.needsUpdate=true;const oak=woodTex();oak.repeat.set(.5,.5);
+  interiorMats={
+    wall:sm(0xf3ece0,.92,{side:THREE.FrontSide}),cap:new THREE.MeshBasicMaterial({color:0x2c2119,side:THREE.BackSide}),
+    trav:sm(0xf0e6d4,.45,{map:trav}),oak:sm(0xe9d2b4,.6,{map:oak}),tile:sm(0xd6cab8,.35,{map:trav}),paver:sm(0xd9cdb8,.9,{map:paver.map}),
+    walnut:sm(0x5b3a24,.5),walnutL:sm(0x7a5434,.55),linen:sm(0xf1ebe0,.95),boucle:sm(0xebe3d5,1),olive:sm(0x56623e,.55),sage:sm(0x8b9a74,.9),
+    blue:sm(0x7d93ab,.9),quartz:sm(0xf4f1ec,.22),marble:sm(0x2a2624,.18),bronze:sm(0xa8845a,.32,{metalness:.85}),porcelain:sm(0xfbfaf7,.12),
+    water:sm(0xcfe1e4,.05),glass:new THREE.MeshPhysicalMaterial({color:0xdde9e8,roughness:.05,transparent:true,opacity:.28,depthWrite:false}),
+    rug:sm(0xcfbd9f,1),rug2:sm(0xa9ad92,1),leaf:sm(0x5a6a3c,.85),pot:sm(0xd9cbb4,.9),black:sm(0x18181a,.3),frame:sm(0x2e2a25,.45,{metalness:.4}),
+    glazing:new THREE.MeshPhysicalMaterial({color:0xbfd3d3,roughness:.05,transparent:true,opacity:.35,depthWrite:false})};
+  return interiorMats}
+function buildInterior(y0){
+  const K=interiorKit(),g=new THREE.Group();
+  const box=(w,h,d,m,x,y,z,r=.03,ry=0)=>{const mesh=new THREE.Mesh(new RoundedBoxGeometry(w,h,d,2,Math.min(r,w/2-.001,h/2-.001,d/2-.001)),m);mesh.position.set(x,y0+y+h/2,z);mesh.rotation.y=ry;mesh.castShadow=h>.05;mesh.receiveShadow=true;g.add(mesh);return mesh};
+  const cyl=(rt,rb,h,m,x,y,z,seg=28)=>{const mesh=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg),m);mesh.position.set(x,y0+y+h/2,z);mesh.castShadow=true;mesh.receiveShadow=true;g.add(mesh);return mesh};
+  const floor=(x0,x1,z0,z1,m)=>{const mesh=new THREE.Mesh(new THREE.PlaneGeometry(x1-x0,z1-z0),m);mesh.rotation.x=-Math.PI/2;mesh.position.set((x0+x1)/2,y0+.006,(z0+z1)/2);mesh.receiveShadow=true;
+    const uv=mesh.geometry.attributes.uv;for(let i=0;i<uv.count;i++)uv.setXY(i,uv.getX(i)*(x1-x0),uv.getY(i)*(z1-z0));g.add(mesh)};
+  const plant=(x,z,s=1)=>{cyl(.17*s,.13*s,.36*s,K.pot,x,0,z);for(let i=0;i<5;i++){const m=new THREE.Mesh(new THREE.IcosahedronGeometry(.2*s,1),K.leaf);m.position.set(x+Math.sin(i*2.4)*.12*s,y0+(.62+i*.13)*s,z+Math.cos(i*2.4)*.12*s);m.castShadow=true;g.add(m)}};
+  // floors by room, from the plan
+  floor(0,3.2,-9.2,0,K.trav);floor(3.2,4.2,-9.2,-2.5,K.trav);floor(4.2,4.8,-9.2,-3.6,K.trav);
+  floor(4.2,7.8,-3.6,0,K.oak);floor(4.8,7.8,-7.2,-3.6,K.oak);floor(3.7,7.8,-12.2,-9.2,K.oak);
+  floor(4.8,7.8,-9.2,-7.2,K.tile);floor(3.2,4.2,-2.5,0,K.tile);floor(0,3.2,-11.4,-9.2,K.paver);
+  // kitchen: olive run, pantry, island and stools
+  box(2.9,.86,.6,K.olive,1.6,0,-.4,.02);box(2.95,.04,.64,K.quartz,1.6,.86,-.4,.01);box(.6,.012,.5,K.black,2.2,.9,-.4,.005);box(.5,.02,.38,K.frame,.95,.895,-.42,.005);
+  box(.6,2.2,.95,K.olive,.36,0,-1.65,.02);box(1.35,.88,.62,K.olive,1.85,0,-1.6,.02);box(1.45,.04,.72,K.quartz,1.85,.88,-1.6,.01);
+  for(const x of [1.55,2.15]){cyl(.025,.025,.62,K.bronze,x,0,-2.12,8);cyl(.19,.19,.06,K.walnutL,x,.62,-2.12)}
+  // dining: round walnut table, six boucle chairs, sideboard
+  cyl(.12,.2,.72,K.walnut,1.6,0,-4.05);cyl(.66,.66,.045,K.walnut,1.6,.72,-4.05,48);box(.4,.04,.4,K.pot,1.6,.765,-4.05,.1);
+  for(let i=0;i<6;i++){const a=i/6*Math.PI*2+Math.PI/6,x=1.6+Math.sin(a)*.92,z=-4.05+Math.cos(a)*.92;const s=box(.46,.46,.46,K.boucle,x,0,z,.1,a);const bk=box(.46,.36,.1,K.boucle,x+Math.sin(a)*.2,.44,z+Math.cos(a)*.2,.05,a)}
+  box(.42,.74,1.7,K.walnut,.27,0,-4.05,.02);box(.3,.3,.3,K.pot,.27,.74,-3.6,.1);plant(.4,-5.25,.9);
+  // living: L-shaped boucle sofa, marble table, rug, media wall
+  box(2.5,.015,2.9,K.rug,1.75,0,-7.4,.005);
+  box(.95,.42,2.7,K.boucle,.72,0,-7.4,.12);box(.25,.8,2.7,K.boucle,.28,0,-7.4,.1);box(1.15,.42,.95,K.boucle,1.75,0,-8.27,.12);box(1.15,.8,.25,K.boucle,1.75,0,-8.7,.1);
+  for(const z of [-6.4,-7.1,-7.8])box(.16,.36,.42,K.linen,.48,.42,z,.06);box(.4,.36,.16,K.sage,1.5,.42,-8.5,.06);
+  cyl(.48,.48,.36,K.marble,1.8,0,-7.0,40);box(.18,.12,.18,K.bronze,1.8,.36,-7.0,.05);
+  box(.42,.45,1.7,K.walnut,2.98,0,-7.3,.02);box(.05,.72,1.3,K.black,2.95,.62,-7.3,.01);
+  plant(.38,-9.0,1);
+  // terrace: loungers, low table, olive trees
+  for(const x of [.75,2.45]){box(.78,.32,.8,K.walnutL,x,0,-10.55,.04);box(.72,.12,.74,K.linen,x,.32,-10.55,.05);box(.72,.4,.14,K.linen,x,.32,-10.9,.05)}
+  cyl(.3,.3,.34,K.walnut,1.6,0,-10.3);plant(.3,-9.5,1.1);plant(2.9,-11.1,1.1);
+  // master bedroom
+  box(2.6,.015,2.4,K.rug,6.45,0,-1.8,.005);box(2.15,.3,1.9,K.walnut,6.62,0,-1.8,.04);box(2.05,.24,1.8,K.linen,6.62,.3,-1.8,.08);box(.7,.03,1.86,K.sage,5.95,.54,-1.8,.02);
+  for(const z of [-1.35,-2.25])box(.32,.16,.62,K.linen,7.42,.54,z,.07);box(.1,1.15,2.3,K.walnut,7.7,0,-1.8,.02);
+  for(const z of [-.45,-3.15]){box(.45,.5,.42,K.walnut,7.48,0,z,.02);cyl(.07,.1,.28,K.bronze,7.48,.5,z,16)}
+  box(1.5,2.2,.6,K.walnut,5.05,0,-.36,.02);plant(4.55,-3.25,.9);
+  // second bedroom
+  box(1.95,.28,1.7,K.walnutL,6.78,0,-5.4,.04);box(1.85,.24,1.6,K.linen,6.78,.28,-5.4,.08);box(.6,.03,1.66,K.sage,6.15,.52,-5.4,.02);
+  for(const z of [-5.0,-5.8])box(.3,.15,.55,K.linen,7.5,.52,z,.07);box(.14,1.0,1.85,K.sage,7.68,0,-5.4,.06);
+  for(const z of [-4.3,-6.5])box(.4,.48,.4,K.walnut,7.52,0,z,.02);box(1.1,.75,.5,K.walnut,5.45,0,-6.9,.02);box(.45,.45,.45,K.sage,5.45,0,-6.45,.1);box(1.3,2.2,.55,K.walnut,5.6,0,-3.9,.02);
+  // bathroom: tub, vanity, shower, wc
+  box(.82,.56,1.72,K.porcelain,7.33,0,-8.2,.12);box(.64,.02,1.5,K.water,7.33,.53,-8.2,.01);cyl(.015,.015,.95,K.bronze,6.86,0,-7.45,8);
+  box(1.1,.48,.48,K.walnut,6.05,.3,-7.48,.02);box(1.15,.05,.5,K.quartz,6.05,.78,-7.48,.01);box(.42,.12,.34,K.porcelain,6.05,.83,-7.5,.06);
+  box(.95,.04,.95,K.tile,5.3,0,-8.68,.01);box(.02,1.9,.95,K.glass,5.79,0,-8.68,.005);box(.95,1.9,.02,K.glass,5.3,0,-8.2,.005);
+  box(.38,.4,.55,K.porcelain,6.3,0,-8.88,.12);
+  // third bedroom: twin beds
+  box(2.6,.015,1.6,K.rug2,5.75,0,-10.4,.005);
+  for(const x of [4.85,6.65]){box(1.05,.28,2.0,K.walnutL,x,0,-11.1,.04);box(.95,.22,1.9,K.linen,x,.28,-11.1,.08);box(1.0,.03,.75,K.blue,x,.5,-10.6,.02);box(.6,.14,.3,K.linen,x,.5,-11.85,.06);box(1.1,.95,.1,K.walnutL,x,0,-12.1,.03)}
+  box(.42,.5,.4,K.walnut,5.75,0,-11.85,.02);box(.36,.85,1.3,K.walnut,7.58,0,-9.95,.02);
+  // guest washroom + hall runner
+  box(.42,.8,.6,K.walnut,3.92,0,-.55,.02);box(.4,.12,.32,K.porcelain,3.88,.8,-.55,.06);box(.36,.4,.5,K.porcelain,3.7,0,-2.05,.12);
+  box(.9,.012,5.0,K.rug2,4.0,0,-6.0,.004);
+  const clip=[new THREE.Plane(new THREE.Vector3(0,-1,0),y0+CUT_H)];g.traverse(o=>{if(o.isMesh)o.material.clippingPlanes=clip});
+  return g}
+// the client's unit shell, re-dressed for the cutaway: walls cut at CUT_H with a walnut cap seen through the cut
+function luxuryApt(){const K=interiorKit(),ob=aptModel.scene.clone(true);let y0=-Infinity;ob.updateMatrixWorld(true);
+  ob.traverse(o=>{if(o.isMesh&&/Limestone floor/.test(o.material.name))y0=Math.max(y0,new THREE.Box3().setFromObject(o).max.y)});if(!isFinite(y0))y0=0;
+  const clip=[new THREE.Plane(new THREE.Vector3(0,-1,0),y0+CUT_H)];const caps=[];
+  ob.traverse(o=>{if(!o.isMesh)return;const n=o.material.name;o.castShadow=true;o.receiveShadow=true;
+    const m=/plaster/.test(n)?K.wall:/Limestone/.test(n)?K.trav:/Window/.test(n)?K.frame:/Oak/.test(n)?K.walnut:/Terrace/.test(n)?K.paver:/glazing/i.test(n)?K.glazing:K.wall;o.material=m;
+    if(m===K.wall||m===K.walnut||m===K.frame)caps.push(o)});
+  for(const o of caps){const c=new THREE.Mesh(o.geometry,K.cap);c.castShadow=false;o.add(c)}
+  for(const k of ['wall','cap','frame','walnut','glazing'])K[k].clippingPlanes=clip;
+  return {ob,y0}}
 
 /* ───────────────────────── stages ───────────────────────── */
 const pins=$('#pins');let labels=[];
@@ -600,16 +707,14 @@ function mount(stage){
   clearStage();aptPicks=[];
   const inside=stage==='floor'||stage==='unit';
   if(complex)complex.visible=!inside||stage==='floor';
-  // building stage isolates the chosen building; floor stage keeps it, cut just below the chosen floor
-  const cut=stage==='floor'?[new THREE.Plane(new THREE.Vector3(0,-1,0),st.f*FH+.05)]:[];
-  for(const b of LETTERS){const show=stage==='complex'||b===st.b;if(roots[b])roots[b].visible=show&&stage!=='unit'}
-  complex&&complex.traverse(o=>{if(o.isMesh&&o.userData.logo)o.visible=stage==='complex'||(stage==='building'&&o.userData.building===st.b)});
-  for(const m of [M.stone,M.roof,M.bronze,M.darkMetal,M.glass])m.clippingPlanes=cut;
-  complex&&complex.traverse(o=>{if(o.isMesh&&o.userData.building&&![M.stone,M.roof,M.bronze,M.darkMetal,M.glass].includes(o.material))o.material.clippingPlanes=cut});
+  // every building stays in view; the floor stage cuts away only the chosen building above the chosen floor
+  const cutting=stage==='floor';const cc=centerOf(st.b);
+  U.cutY.value=cutting?st.f*FH+.05:1e9;U.cutB.value.set(cc.x-14.68,cc.x+14.68,cc.z-13.6,cc.z+13.6);
+  for(const b of LETTERS){if(roots[b])roots[b].visible=stage!=='unit';(buildingMeshes[b]||[]).forEach(o=>o.castShadow=!(cutting&&b===st.b))}
+  complex&&complex.traverse(o=>{if(o.isMesh&&o.userData.logo)o.visible=!(cutting&&o.userData.building===st.b)});
   if(urban)urban.visible=stage!=='unit';extras.visible=stage!=='unit';
-  // the near palm row blocks the facade once a building is isolated
-  for(const p of palms)p.visible=stage==='complex'||p.userData.z*faceOf(st.b)<0;
-  if(stage==='complex'){LETTERS.forEach(b=>{const c=bCounts(b);addLabel(`<span class="chip"><b>${b}</b>المبنى ${b} · ${c.ok} متاحة</span><span class="stem"></span>`,centerOf(b).add(new THREE.Vector3(0,10,0)),'pin',()=>go('building',{b}),{kind:'building',id:b})})}
+
+  if(stage==='complex'){LETTERS.forEach(b=>{addLabel(`<span class="chip only">مبنى ${b}</span><span class="stem"></span>`,centerOf(b).add(new THREE.Vector3(0,10,0)),'pin',()=>go('building',{b}),{kind:'building',id:b})})}
   if(stage==='building'){const c=centerOf(st.b);FLOORS.forEach((n,f)=>{addLabel(`الدور ${n}`,new THREE.Vector3(c.x+16,1.9+f*FH,c.z+faceOf(st.b)*14.2),'flabel',()=>go('floor',{f}),{kind:'floor',id:f});
       const p=new THREE.Mesh(new THREE.BoxGeometry(29.2,3.6,27),new THREE.MeshBasicMaterial({visible:false}));p.position.set(c.x,1.9+f*FH,c.z);p.userData.floor=f;floorProxies.add(p)})}
   if(stage==='floor'){const c=centerOf(st.b),h=st.f*FH+.1;
@@ -618,9 +723,10 @@ function mount(stage){
       sh.traverse(o=>{if(o.isMesh){o.userData.unit=i;aptPicks.push(o)}});stageGroup.add(sh);
       addLabel(`<i class="dot ${u.status}" style="margin:0"></i>${u.id}`,new THREE.Vector3(c.x-11.2+col*11.2,h+3.2,c.z+(back?7.2:-7.2)),'upin',()=>pickUnit(i),{kind:'unit',id:i})});
     const cor=new THREE.Mesh(new THREE.BoxGeometry(33,.18,2.9),new THREE.MeshStandardMaterial({color:0xcfc6b4,roughness:1}));cor.position.set(c.x,h-.02,c.z);cor.receiveShadow=true;stageGroup.add(cor)}
-  if(stage==='unit'){const sh=cloneApt(null,1);stageGroup.add(sh);
-    const base=new THREE.Mesh(new THREE.BoxGeometry(14,.3,18),new THREE.MeshStandardMaterial({color:0xe2d9ca,roughness:.95}));base.position.set(4,-.4,-6.1);base.receiveShadow=true;stageGroup.add(base);
-    for(const [n,x,z,w,d] of ROOM_METRICS)addLabel(`<strong>${n}</strong><span>${fmt(w*d)} م²</span><small>${fmt(w)} × ${fmt(d)} م</small>`,new THREE.Vector3(x,.3,z),'rlabel measure');
+  if(stage==='unit'){const {ob,y0}=luxuryApt();stageGroup.add(ob);stageGroup.add(buildInterior(y0));
+    const base=new THREE.Mesh(new RoundedBoxGeometry(10.6,.5,14.8,3,.12),new THREE.MeshStandardMaterial({color:0x26362e,roughness:1,envMapIntensity:0}));base.position.set(3.9,y0-.37,-6.1);base.receiveShadow=true;stageGroup.add(base);
+    const rim=new THREE.Mesh(new THREE.BoxGeometry(10.62,.025,14.82),new THREE.MeshStandardMaterial({color:0xb08a5c,metalness:.8,roughness:.35}));rim.position.set(3.9,y0-.3,-6.1);stageGroup.add(rim);
+    for(const [n,x,z,w,d] of ROOM_METRICS)addLabel(`<strong>${n}</strong><span>${fmt(w*d)} م²</span>`,new THREE.Vector3(x,y0+1.45,z),'rlabel compact measure');
     const dims=new THREE.Group();dims.name='dims';const lm=new THREE.LineBasicMaterial({color:0xC49A6C});
     const dim=(a,b,t)=>{const v=a.clone().sub(b).normalize(),k=new THREE.Vector3(-v.z,0,v.x).multiplyScalar(.18);dims.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints([a,b,a.clone().sub(k),a.clone().add(k),b.clone().sub(k),b.clone().add(k)]),lm));addLabel(t,a.clone().add(b).multiplyScalar(.5).add(k.clone().multiplyScalar(2.4)),'dlabel measure')};
     dim(new THREE.Vector3(0,.08,.8),new THREE.Vector3(7.8,.08,.8),'7.8 م');dim(new THREE.Vector3(8.7,.08,0),new THREE.Vector3(8.7,.08,-12.2),'12.2 م');stageGroup.add(dims)}
@@ -634,12 +740,13 @@ function mount(stage){
 function applyStageLook(){
   const inside=st.stage==='floor'||st.stage==='unit';
   sky.visible=!inside||st.stage==='floor';scene.background=st.stage==='unit'?BG_INSIDE:null;
+  if(envRT)scene.environment=st.stage==='unit'?roomEnv:envRT.texture;
   scene.fog=st.stage==='unit'?null:new THREE.FogExp2(dusk?0x6b5450:0xcdbb9d,dusk?.0010:.00055);
-  renderer.toneMappingExposure=st.stage==='unit'?1:(dusk?.58:.62);
+  renderer.toneMappingExposure=st.stage==='unit'?.95:(dusk?.58:.62);
   hemi.intensity=st.stage==='unit'?1.1:(dusk?.25:.42);
 }
 function updateShadowBox(){const t=st.stage==='unit'?new THREE.Vector3(4,0,-6):st.stage==='complex'?SITE_C.clone():centerOf(st.b);const r=st.stage==='unit'?16:st.stage==='complex'?120:45;
-  sun.target.position.copy(t);sun.position.copy(t).addScaledVector(SUN,300);Object.assign(sun.shadow.camera,{left:-r,right:r,top:r,bottom:-r,near:10,far:700});sun.shadow.camera.updateProjectionMatrix()}
+  sun.target.position.copy(t);sun.position.copy(t).addScaledVector(st.stage==='unit'&&!dusk?new THREE.Vector3(-.32,1,.42).normalize():SUN,300);Object.assign(sun.shadow.camera,{left:-r,right:r,top:r,bottom:-r,near:10,far:700});sun.shadow.camera.updateProjectionMatrix()}
 function go(stage,o={}){Object.assign(st,o);if(stage==='floor'||stage==='unit'||stage==='building')st.view=st.view||'perspective';mount(stage)}
 function pickUnit(i){const u=unitInfo(st.b,st.f,i);if(u.status==='sold'){toast(`الشقة ${u.id} مباعة في بيانات العرض`);return}go('unit',{u:i})}
 
@@ -650,9 +757,8 @@ function setHover(h){st.hover=h;U.band.value.set(-999,-998);hlBox.visible=false;
   if(h&&h.kind==='unit'&&st.stage==='floor'){const c=centerOf(st.b),i=h.id,back=i>3,col=(i-1)%3;hlBox.position.set(c.x-11.2+col*11.2,st.f*FH+1.5,c.z+(back?7.2:-7.2));hlBox.scale.set(10.3,2.9,10.9);hl.material.opacity=.14;hlBox.visible=true}
   labels.forEach(l=>{const k=l.el.dataset;l.el.classList.toggle('hot',false)});
   document.querySelectorAll('[data-hk]').forEach(el=>el.classList.toggle('hot',!!h&&el.dataset.hk===h.kind+':'+h.id));
-  const tip=$('#tip');if(h&&lastPtr&&(h.kind==='building'||h.kind==='floor')&&!isMobile){const c=h.kind==='building'?bCounts(h.id):counts(unitsOf(st.b,h.id));
-    tip.innerHTML=`<b>${h.kind==='building'?'المبنى '+h.id:'الدور '+FLOORS[h.id]}</b><div class="cn"><span><b>${c.ok}</b>متاحة</span><span><b>${c.hold}</b>محجوزة</span><span><b>${c.sold}</b>مباعة</span></div>`;
-    tip.hidden=false;const r=tip.getBoundingClientRect();tip.style.left=Math.min(lastPtr.x+16,innerWidth-r.width-12)+'px';tip.style.top=Math.max(80,lastPtr.y+16)+'px'}else tip.hidden=true}
+  
+  if(!h&&st.stage==='building'){hlBox.position.copy(centerOf(st.b));hlBox.scale.set(29.1,15.1,27);hl.material.opacity=.05;hlBox.visible=true}}
 let lastPtr=null;
 
 /* ───────────────────────── panel ───────────────────────── */
@@ -662,42 +768,29 @@ function render(){
   const s=st.stage,u=unitInfo(st.b,st.f,st.u);
   crumbs.innerHTML=`<button type="button" data-go="complex">المجمع</button>${s!=='complex'?`<span class="sep">‹</span><button type="button" data-go="building">المبنى ${st.b}</button>`:''}${s==='floor'||s==='unit'?`<span class="sep">‹</span><button type="button" data-go="floor">الدور ${FLOORS[st.f]}</button>`:''}${s==='unit'?`<span class="sep">‹</span><span class="cur">${u.id}</span>`:''}`;
   crumbs.querySelectorAll('[data-go]').forEach(el=>el.onclick=()=>go(el.dataset.go));
-  if(s==='complex'){const all=LETTERS.reduce((a,b)=>{const c=bCounts(b);a.ok+=c.ok;a.n+=24;return a},{ok:0,n:0});
-    pbody.innerHTML=`<div><div class="eyebrow">مكين 102 · المجمع السكني</div><h1>اختر المبنى</h1></div>
-      <p>حرّك المجمع لاستكشافه. مرّر المؤشر على مبنى لتحديده، ثم اضغط للاقتراب.</p>
-      <div class="stats"><div class="stat"><b>8</b><span>نطاقات اختيار</span></div><div class="stat"><b>4</b><span>أدوار للعرض</span></div><div class="stat"><b>${all.ok}</b><span>شقة متاحة</span></div></div>
-      <div class="legend"><span><i class="dot ok"></i>متاحة</span><span><i class="dot hold"></i>محجوزة</span><span><i class="dot sold"></i>مباعة</span></div>
-      <div class="blist">${LETTERS.map(b=>{const c=bCounts(b);return `<button class="bitem" type="button" data-b="${b}" data-hk="building:${b}"><span class="bnum">${b}</span><span class="bmeta"><strong>المبنى ${b}</strong><small>${c.ok} متاحة · ${c.hold} محجوزة · ${c.sold} مباعة</small>${barHTML(c,24)}</span><span class="chev">‹</span></button>`}).join('')}</div>
-      <div class="note">الخارج من نموذج العميل 102. المحيط تقريبي مستوحى من مكين 64. تقسيمه إلى نطاقات A–H لأغراض العرض، ويحتاج اعتماد حدود المباني.</div>`;
+  if(s==='complex'){
+    pbody.innerHTML=`<h1>اختر المبنى</h1>
+      <div class="blist simple">${LETTERS.map(b=>`<button type="button" data-b="${b}" data-hk="building:${b}"><b>${b}</b>مبنى</button>`).join('')}</div>`;
     pbody.querySelectorAll('[data-b]').forEach(el=>{const b=el.dataset.b;el.onclick=()=>go('building',{b});el.onmouseenter=()=>setHover({kind:'building',id:b});el.onmouseleave=()=>setHover(null)})}
-  if(s==='building'){const c=bCounts(st.b);
-    pbody.innerHTML=`<div><div class="eyebrow">مكين 102 · استكشف المبنى</div><h1>المبنى ${st.b}</h1></div>
-      <p>المبنى المختار معزول لإظهار واجهاته بوضوح. مرّر المؤشر على دور لتحديده، ثم اضغط لعرض الشقق.</p>
-      <div class="stats"><div class="stat"><b>4</b><span>أدوار</span></div><div class="stat"><b>24</b><span>شقة</span></div><div class="stat"><b>${c.ok}</b><span>متاحة</span></div></div>
-      <div class="floors">${[3,2,1,0].map(f=>{const us=unitsOf(st.b,f),cc=counts(us);return `<button class="fitem" type="button" data-f="${f}" data-hk="floor:${f}"><span class="flvl">${f}</span><span class="grow"><strong style="font-weight:500">الدور ${FLOORS[f]}</strong><br><small style="color:var(--cream-dim)">${cc.ok} متاحة · 6 شقق</small></span><span class="pips">${us.map(x=>`<i style="background:var(--${x.status})"></i>`).join('')}</span></button>`}).join('')}</div>
-      <div class="note">حدود الأدوار وتوزيع الشقق في هذه النسخة توضيحية، وليست مخططات بيع معتمدة.</div>`;
+  if(s==='building'){
+    pbody.innerHTML=`<h1>مبنى ${st.b}</h1>
+      <div class="floors">${[3,2,1,0].map(f=>`<button class="fitem" type="button" data-f="${f}" data-hk="floor:${f}"><span class="flvl">${f}</span><span class="grow">الدور ${FLOORS[f]}</span><span class="chev">‹</span></button>`).join('')}</div>`;
     pbody.querySelectorAll('[data-f]').forEach(el=>{const f=+el.dataset.f;el.onclick=()=>go('floor',{f});el.onmouseenter=()=>setHover({kind:'floor',id:f});el.onmouseleave=()=>setHover(null)})}
   if(s==='floor'){const us=unitsOf(st.b,st.f);
-    pbody.innerHTML=`<div><div class="eyebrow">المبنى ${st.b} · اختر مساحتك</div><h1>الدور ${FLOORS[st.f]}</h1></div>
-      <p>اختر شقة من المسقط لفتح مجسّمها وتصميمها الداخلي.</p>
-      <div class="legend"><span><i class="dot ok"></i>متاحة</span><span><i class="dot hold"></i>محجوزة</span><span><i class="dot sold"></i>مباعة</span></div>
-      <div class="units">${us.map(x=>`<button class="uitem ${x.status==='sold'?'sold':''}" type="button" data-u="${x.i}" data-hk="unit:${x.i}"><span class="no">${x.id}</span><small>${x.area} م² · ${x.beds} غرف نوم</small><span class="pill ${x.status}">${STATUS_TXT[x.status]}</span></button>`).join('')}</div>
-      <div class="note">توزيع الشقق على الدور تجريبي، ونموذج الشقة مبني من مخطط موجود في ملفات العميل.</div>`;
+    pbody.innerHTML=`<h1>الدور ${FLOORS[st.f]}</h1>
+      <div class="units">${us.map(x=>`<button class="uitem ${x.status==='sold'?'sold':''}" type="button" data-u="${x.i}" data-hk="unit:${x.i}"><span class="no">${x.id}</span><span class="pill ${x.status}">${STATUS_TXT[x.status]}</span></button>`).join('')}</div>`;
     pbody.querySelectorAll('[data-u]').forEach(el=>{const i=+el.dataset.u;el.onclick=()=>pickUnit(i);el.onmouseenter=()=>setHover({kind:'unit',id:i});el.onmouseleave=()=>setHover(null)})}
   if(s==='unit'){
-    pbody.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px"><div><div class="eyebrow">المبنى ${st.b} · الدور ${FLOORS[st.f]}</div><h1>الشقة ${u.id}</h1></div><span class="pill ${u.status}" style="margin-top:8px">${STATUS_TXT[u.status]}</span></div>
+    pbody.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px"><h1>الشقة ${u.id}</h1><span class="pill ${u.status}" style="margin-top:8px">${STATUS_TXT[u.status]}</span></div>
       <div class="gallery"><div class="gmain" id="gmain"><div class="ph">التصميم الداخلي</div><img id="gimg" alt=""><div class="cap" id="gcap"></div></div>
         <div class="thumbs">${ROOMS.map((r,i)=>`<button type="button" data-g="${i}" aria-label="${r.name}"><img src="${r.src}" alt="" loading="lazy"></button>`).join('')}</div></div>
       <div class="row"><button class="btn primary" type="button" id="open360">جولة 360° داخل الشقة كاملة</button><button class="btn ghost" type="button" id="openLB">الصور بالحجم الكامل</button></div>
-      <div class="stats"><div class="stat"><b>${u.beds}</b><span>غرف نوم</span></div><div class="stat"><b>${u.area}</b><span>م² افتراضية</span></div><div class="stat"><b>A</b><span>نموذج الشقة</span></div></div>
       <div><h3 style="margin-bottom:10px">مساحات الفراغات</h3><div class="rooms">${ROOM_METRICS.map(([n,,,w,d])=>`<div><span>${n}<small>${fmt(w)} × ${fmt(d)} م</small></span><b>${fmt(w*d)} م²</b></div>`).join('')}</div></div>
-      <a class="planimg" href="assets/plan.jpg" target="_blank" rel="noopener"><img src="assets/plan.jpg" alt="المخطط الأصلي للشقة"></a>
-      <div class="phone"><div><small style="color:var(--cream-dim)">للاطلاع على الأسعار وحجز الوحدة</small><br><b>9200 333 66</b></div><button class="btn ghost" type="button" id="copyPh">نسخ الرقم</button></div>
-      <div class="note">الصور تصاميم داخلية مقترحة لأغراض العرض. المساحة الإجمالية 110 م² قيمة افتراضية موحّدة، ومساحات الفراغات محسوبة تقريبيًا من أبعاد المخطط.</div>`;
+      <div class="phone"><div><small style="color:var(--cream-dim)">للاطلاع على الأسعار وحجز الوحدة</small><br><b>9200 333 66</b></div><button class="btn ghost" type="button" id="copyPh">نسخ الرقم</button></div>`;
     let gi=0;const show=i=>{gi=i;const r=ROOMS[i],img=$('#gimg');img.style.opacity=0;img.onload=()=>img.style.opacity=1;img.src=r.src;img.alt=r.name;$('#gcap').textContent=r.name;pbody.querySelectorAll('[data-g]').forEach(b=>b.classList.toggle('on',+b.dataset.g===i))};
     pbody.querySelectorAll('[data-g]').forEach(el=>el.onclick=()=>show(+el.dataset.g));show(0);
     $('#gmain').onclick=()=>openLB(gi,u);$('#openLB').onclick=()=>openLB(gi,u);$('#open360').onclick=openPano;$('#copyPh').onclick=()=>copyText('920033366')}
-  pbody.scrollTop=0;$('#panel').classList.remove('min');
+  pbody.scrollTop=0;
 }
 
 /* ───────────────────────── picking ───────────────────────── */
@@ -724,7 +817,8 @@ $('#cSun').onclick=e=>{dusk=!dusk;tog(e.currentTarget,dusk);setLighting()};
 $('#cStreet').onclick=()=>{st.street=!st.street;tog($('#cStreet'),st.street);controls.maxPolarAngle=st.street?Math.PI*.56:Math.PI*.48;resetCamera()};
 $('#cMeasure').onclick=e=>{st.measure=!st.measure;tog(e.currentTarget,st.measure);const d=stageGroup.getObjectByName('dims');if(d)d.visible=st.measure};
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{st.view=b.dataset.view;document.querySelectorAll('[data-view]').forEach(x=>tog(x,x===b));controls.enableRotate=st.view!=='top';resetCamera()});
-$('#grab').onclick=()=>$('#panel').classList.toggle('min');
+function togglePanel(){const p=$('#panel'),m=p.classList.toggle('min');$('#ptog').setAttribute('aria-expanded',!m);$('#ptogT').textContent=m?'القائمة':'إخفاء';resize()}
+$('#grab').onclick=togglePanel;$('#ptog').onclick=togglePanel;
 function toast(t){const el=document.createElement('div');el.className='toast';el.textContent=t;$('#app').appendChild(el);setTimeout(()=>el.remove(),2400)}
 async function copyText(t){try{await navigator.clipboard.writeText(t);toast('تم نسخ الرقم')}catch(e){toast('الرقم: 9200 333 66')}}
 
@@ -750,7 +844,11 @@ const TOUR=[
 const TR=Object.fromEntries(TOUR.map(r=>[r.id,r]));
 const D2R=Math.PI/180;
 let pano=null;
-function openPano(){$('#panoModal').hidden=false;if(!pano||!pano.go){const c=pano&&pano.cur;initPano();if(c)pano.cur=c}pano.resize();pano.run=true;pano.go(pano.cur?pano.cur.id:'living');pano.loop()}
+function closePano(){$('#panoModal').hidden=true;if(pano)pano.run=false}
+function tourCrumbs(){const u=unitInfo(st.b,st.f,st.u);const items=[['complex','المجمع'],['building','مبنى '+st.b],['floor','الدور '+FLOORS[st.f]],['unit','الشقة '+u.id]];
+  $('#tCrumbs').innerHTML=items.map(([k,t])=>`<button type="button" data-tgo="${k}">${t}</button>`).join('<span class="sep">‹</span>')+'<span class="sep">‹</span><span style="color:var(--bronze-soft)">جولة <bdi>360°</bdi></span>';
+  $('#tCrumbs').querySelectorAll('[data-tgo]').forEach(el=>el.onclick=()=>{closePano();if(aptModel)go(el.dataset.tgo)})}
+function openPano(){$('#panoModal').hidden=false;tourCrumbs();if(!pano||!pano.go){const c=pano&&pano.cur;initPano();if(c)pano.cur=c}pano.resize();pano.run=true;pano.go(pano.cur?pano.cur.id:'living');pano.loop()}
 function initPano(){
   const c=$('#pano');const r=new THREE.WebGLRenderer({canvas:c,antialias:true});r.setPixelRatio(Math.min(devicePixelRatio,2));r.outputColorSpace=THREE.SRGBColorSpace;
   const s=new THREE.Scene();const cam=new THREE.PerspectiveCamera(75,1,.1,200);
@@ -803,7 +901,7 @@ function initPano(){
       requestAnimationFrame(pano.loop)}};
   addEventListener('resize',()=>pano&&pano.resize());
 }
-$('#panoClose').onclick=()=>{$('#panoModal').hidden=true;if(pano)pano.run=false};
+$('#panoClose').onclick=()=>{closePano();if(st.stage!=='unit'&&aptModel)go('unit')};
 addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(!$('#panoModal').hidden){$('#panoModal').hidden=true;if(pano)pano.run=false;return}if(!$('#lbModal').hidden){$('#lbModal').hidden=true;return}if(!$('#drawer').hidden){$('#drawer').hidden=true;return}
   if(st.stage!=='complex')go(st.stage==='unit'?'floor':st.stage==='floor'?'building':'complex')});
 
@@ -856,6 +954,8 @@ function animate(now){
     if(ur)prepUrban(ur);sedan=se;addStreetLife();
     setProg(1,'لحظات ونبدأ');
     mount('complex');
+    // deep link to an apartment, e.g. #unit=C-202
+    {const m=location.hash.match(/^#unit=([A-H])-(\d)(\d\d)$/);if(m&&+m[2]<FLOORS.length&&+m[3]>=1&&+m[3]<=6)go('unit',{b:m[1],f:+m[2],u:+m[3]})}
     setTimeout(()=>$('#loader').classList.add('done'),300);
   }catch(err){console.error(err);$('#loadT').textContent='تعذّر تحميل العرض ثلاثي الأبعاد';$('#loadS').textContent='تحقق من الاتصال واستخدم متصفحًا يدعم WebGL، ثم أعد تحميل الصفحة.'}
 })();
