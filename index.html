@@ -252,6 +252,31 @@ dl{margin:0}
 .htip .cn{display:flex;gap:12px;color:var(--cream-dim)}
 .htip .cn span b{display:inline;font-size:16px;color:var(--cream);margin:0 0 0 4px}
 @media (max-width:820px){.vswitch{bottom:auto;top:calc(72px + env(safe-area-inset-top,0px));left:auto;right:max(10px,env(safe-area-inset-right,0px));transform:none}.htip{display:none}}
+.tstage{position:relative;flex:1;min-height:0;overflow:hidden}
+.tstage canvas{position:absolute;inset:0;width:100%;height:100%}
+#pano.fade{opacity:0}#pano{transition:opacity .35s}
+#tHot{position:absolute;inset:0;pointer-events:none}
+.door{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer}
+.door i{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;background:rgba(242,235,221,.18);border:2px solid rgba(242,235,221,.85);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-shadow:0 0 0 0 rgba(196,154,108,.6);animation:dp 2.4s infinite}
+.door i svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:2}
+.door span{font-size:12px;padding:4px 10px;border-radius:99px;background:rgba(23,41,33,.85);border:1px solid var(--line);white-space:nowrap}
+.door:hover i,.door:focus-visible i{background:var(--bronze);border-color:var(--bronze)}
+@keyframes dp{0%{box-shadow:0 0 0 0 rgba(196,154,108,.55)}70%{box-shadow:0 0 0 16px rgba(196,154,108,0)}100%{box-shadow:0 0 0 0 rgba(196,154,108,0)}}
+.tmap{position:absolute;top:12px;left:12px;width:150px;border-radius:12px;overflow:hidden;background:#fff;border:1px solid var(--line);box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.tmap img{display:block;width:100%;height:auto;opacity:.9}
+.tmap b{position:absolute;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:#293D33;border:2px solid #fff;cursor:pointer;padding:0}
+.tmap b.on{background:var(--bronze);width:16px;height:16px;margin:-8px 0 0 -8px;z-index:2}
+.tmap .cone{position:absolute;width:70px;height:70px;margin:-35px 0 0 -35px;pointer-events:none;background:conic-gradient(from -35deg,rgba(196,154,108,.55) 0 70deg,transparent 70deg);border-radius:50%;-webkit-mask:radial-gradient(circle,#000 0 60%,transparent 62%);mask:radial-gradient(circle,#000 0 60%,transparent 62%)}
+.tctl{position:absolute;bottom:12px;left:12px;display:flex;gap:6px}
+.tctl button{width:40px;height:40px;border-radius:12px;background:var(--glass-strong);border:1px solid var(--line);display:grid;place-items:center;font-size:17px}
+.tctl button[aria-pressed="true"]{background:var(--bronze);color:var(--green-900)}
+.tload{position:absolute;inset:auto 0 50% 0;text-align:center;font-size:13px;color:var(--cream-dim);pointer-events:none}
+.thint{position:absolute;top:12px;right:12px;font-size:12px;padding:6px 12px;border-radius:99px;background:rgba(23,41,33,.8);border:1px solid var(--line);pointer-events:none;transition:opacity .6s}
+.trooms{display:flex;gap:6px;overflow-x:auto;padding:10px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px));scrollbar-width:none}
+.trooms button{flex:none;padding:8px 14px;border-radius:99px;border:1px solid var(--line);font-size:13px;white-space:nowrap}
+.trooms button[aria-current="true"]{background:var(--bronze);border-color:var(--bronze);color:var(--green-900)}
+@media (max-width:820px){.tmap{width:96px;top:8px;left:8px}.thint{display:none}}
+#panoModal{background:#0d1411}
 </style>
 
 <div id="app">
@@ -302,8 +327,13 @@ dl{margin:0}
   </div>
 
   <div class="modal" id="panoModal" hidden>
-    <div class="mhead"><div class="grow"><h3>جولة بانورامية داخل الشقة</h3><small>الصالة والطعام والمطبخ · اسحب للنظر حولك · مرّر للتقريب</small></div><button class="x" id="panoClose" type="button" aria-label="إغلاق">×</button></div>
-    <canvas id="pano"></canvas>
+    <div class="mhead"><div class="grow"><h3 id="tTitle">جولة 360° داخل الشقة</h3><small>جولة بانورامية كاملة · اسحب في كل الاتجاهات · اضغط على الأسهم للانتقال بين الغرف</small></div><button class="x" id="panoClose" type="button" aria-label="إغلاق">×</button></div>
+    <div class="tstage"><canvas id="pano"></canvas><div id="tHot"></div><div class="tload" id="tLoad" hidden></div>
+      <div class="tmap" id="tMap"><img src="assets/plan.jpg" alt="مخطط الشقة"></div>
+      <div class="thint" id="tHint">اسحب للنظر 360° · لأعلى للسقف ولأسفل للأرض</div>
+      <div class="tctl"><button id="tAuto" type="button" aria-pressed="false" title="جولة تلقائية">▶</button><button id="tUp" type="button" title="السقف">⤒</button><button id="tDown" type="button" title="الأرضية">⤓</button><button id="tIn" type="button" title="تقريب">+</button><button id="tOut" type="button" title="تبعيد">−</button><button id="tFull" type="button" title="ملء الشاشة">⛶</button></div>
+    </div>
+    <div class="trooms" id="tRooms"></div>
   </div>
 
   <div class="modal" id="lbModal" hidden>
@@ -596,7 +626,7 @@ function mount(stage){
     dim(new THREE.Vector3(0,.08,.8),new THREE.Vector3(7.8,.08,.8),'7.8 م');dim(new THREE.Vector3(8.7,.08,0),new THREE.Vector3(8.7,.08,-12.2),'12.2 م');stageGroup.add(dims)}
   $('#cMeasure').hidden=stage!=='unit';$('#vswitch').hidden=!inside;$('#cStreet').hidden=stage!=='complex';
   tog($('#cStreet'),st.street);
-  $('#hint').textContent=stage==='unit'?'اسحب لتدوير الشقة · افتح الجولة البانورامية من اللوحة':stage==='floor'?'اضغط على شقة لاستعراضها':stage==='building'?'مرّر على الواجهة لتحديد الدور ثم اضغط':'اسحب لتدوير المجمع · قرّب بإصبعين للتكبير';
+  $('#hint').textContent=stage==='unit'?'اسحب لتدوير الشقة · افتح جولة 360° من اللوحة':stage==='floor'?'اضغط على شقة لاستعراضها':stage==='building'?'مرّر على الواجهة لتحديد الدور ثم اضغط':'اسحب لتدوير المجمع · قرّب بإصبعين للتكبير';
   $('#hint').style.opacity=1;clearTimeout(mount.t);mount.t=setTimeout(()=>$('#hint').style.opacity=0,6000);
   $('#foot').textContent=inside?'الشقة من مخطط في ملفات العميل · توزيع الدور تجريبي':'مجسّم العميل 102 · مُجهّز في Blender · محيط تقريبي مستوحى من مكين 64';
   applyStageLook();updateShadowBox();render();resetCamera();
@@ -658,7 +688,7 @@ function render(){
     pbody.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px"><div><div class="eyebrow">المبنى ${st.b} · الدور ${FLOORS[st.f]}</div><h1>الشقة ${u.id}</h1></div><span class="pill ${u.status}" style="margin-top:8px">${STATUS_TXT[u.status]}</span></div>
       <div class="gallery"><div class="gmain" id="gmain"><div class="ph">التصميم الداخلي</div><img id="gimg" alt=""><div class="cap" id="gcap"></div></div>
         <div class="thumbs">${ROOMS.map((r,i)=>`<button type="button" data-g="${i}" aria-label="${r.name}"><img src="${r.src}" alt="" loading="lazy"></button>`).join('')}</div></div>
-      <div class="row"><button class="btn primary" type="button" id="open360">جولة بانورامية داخل الشقة</button><button class="btn ghost" type="button" id="openLB">الصور بالحجم الكامل</button></div>
+      <div class="row"><button class="btn primary" type="button" id="open360">جولة 360° داخل الشقة كاملة</button><button class="btn ghost" type="button" id="openLB">الصور بالحجم الكامل</button></div>
       <div class="stats"><div class="stat"><b>${u.beds}</b><span>غرف نوم</span></div><div class="stat"><b>${u.area}</b><span>م² افتراضية</span></div><div class="stat"><b>A</b><span>نموذج الشقة</span></div></div>
       <div><h3 style="margin-bottom:10px">مساحات الفراغات</h3><div class="rooms">${ROOM_METRICS.map(([n,,,w,d])=>`<div><span>${n}<small>${fmt(w)} × ${fmt(d)} م</small></span><b>${fmt(w*d)} م²</b></div>`).join('')}</div></div>
       <a class="planimg" href="assets/plan.jpg" target="_blank" rel="noopener"><img src="assets/plan.jpg" alt="المخطط الأصلي للشقة"></a>
@@ -703,23 +733,74 @@ let lbi=0;
 function openLB(i,u){lbi=i;$('#lbSub').textContent=`الشقة ${u.id} · تصميم داخلي مقترح`;$('#lbModal').hidden=false;lbShow()}
 function lbShow(){const r=ROOMS[lbi];$('#lbImg').src=r.src;$('#lbImg').alt=r.name;$('#lbTitle').textContent=r.name}
 $('#lbClose').onclick=()=>$('#lbModal').hidden=true;$('#lbNext').onclick=()=>{lbi=(lbi+1)%ROOMS.length;lbShow()};$('#lbPrev').onclick=()=>{lbi=(lbi-1+ROOMS.length)%ROOMS.length;lbShow()};
+/* 360° tour: one equirectangular photo per room. doors = where each doorway sits in that photo,
+   as longitude in degrees from the photo's centre (+ to the right). pin = position on plan.jpg (percent) */
+const TOUR=[
+  {id:'living',name:'غرفة المعيشة',pin:[22,64],north:180,doors:{terrace:0,dining:88,entry:148,bathroom:165,bedroom3:-178}},
+  {id:'dining',name:'غرفة الطعام',pin:[24,44],north:0,doors:{kitchen:0,entry:78,living:168}},
+  {id:'kitchen',name:'المطبخ',pin:[27,22],north:0,doors:{entry:-140,dining:130}},
+  {id:'entry',name:'البهو والممر',pin:[54,40],north:0,doors:{dining:-125,kitchen:-45,bedroom1:77,guestbath:113,bedroom2:133,living:162}},
+  {id:'bedroom1',name:'غرفة النوم الرئيسية',pin:[72,24],north:335,doors:{entry:-118}},
+  {id:'bedroom2',name:'غرفة النوم الثانية',pin:[75,45],north:52,doors:{entry:-122}},
+  {id:'bedroom3',name:'غرفة النوم الثالثة',pin:[70,85],north:69,doors:{living:-125}},
+  {id:'bathroom',name:'دورة المياه',pin:[75,66],north:15,doors:{living:-102}},
+  {id:'guestbath',name:'دورة مياه الضيوف',pin:[48,20],north:351,doors:{entry:178}},
+  {id:'terrace',name:'الشرفة',pin:[28,84],north:349,doors:{living:0}}
+];
+const TR=Object.fromEntries(TOUR.map(r=>[r.id,r]));
+const D2R=Math.PI/180;
 let pano=null;
-function openPano(){$('#panoModal').hidden=false;if(!pano)initPano();pano.resize();pano.run=true;pano.loop()}
+function openPano(){$('#panoModal').hidden=false;if(!pano||!pano.go){const c=pano&&pano.cur;initPano();if(c)pano.cur=c}pano.resize();pano.run=true;pano.go(pano.cur?pano.cur.id:'living');pano.loop()}
 function initPano(){
   const c=$('#pano');const r=new THREE.WebGLRenderer({canvas:c,antialias:true});r.setPixelRatio(Math.min(devicePixelRatio,2));r.outputColorSpace=THREE.SRGBColorSpace;
-  const s=new THREE.Scene();const cam=new THREE.PerspectiveCamera(55,1,.1,100);
-  // the panorama spans about 180°, so it is wrapped on a half-cylinder and the view stays inside it
-  const ARC=Math.PI,RAD=10,HGT=RAD*ARC/2;const geo=new THREE.CylinderGeometry(RAD,RAD,HGT,96,1,true,-ARC/2+Math.PI,ARC);geo.scale(-1,1,1);
-  const mat=new THREE.MeshBasicMaterial({color:0x333333});s.add(new THREE.Mesh(geo,mat));
-  new THREE.TextureLoader().load(R+'pano.jpg',t=>{t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=r.capabilities.getMaxAnisotropy();mat.map=t;mat.color.set(0xffffff);mat.needsUpdate=true});
-  let lon=0,lat=0,drag=null,dir=1;
-  const lim=()=>{const hf=THREE.MathUtils.radToDeg(2*Math.atan(Math.tan(THREE.MathUtils.degToRad(cam.fov/2))*cam.aspect))/2;return {lo:Math.max(0,90-hf-2),la:Math.max(0,THREE.MathUtils.radToDeg(Math.atan((HGT/2)/RAD))-cam.fov/2-1)}};
-  c.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,lon,lat};c.setPointerCapture(e.pointerId);c.style.cursor='grabbing'});
-  c.addEventListener('pointermove',e=>{if(!drag)return;lon=drag.lon+(e.clientX-drag.x)*.1;lat=drag.lat+(e.clientY-drag.y)*.1});
-  c.addEventListener('pointerup',()=>{drag=null;c.style.cursor='grab'});
-  c.addEventListener('wheel',e=>{e.preventDefault();cam.fov=THREE.MathUtils.clamp(cam.fov+e.deltaY*.04,30,62);cam.updateProjectionMatrix()},{passive:false});
-  pano={run:false,resize(){const w=c.clientWidth,h=c.clientHeight;r.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()},
-    loop(){if(!pano.run)return;const L=lim();if(!drag){lon+=.025*dir;if(Math.abs(lon)>=L.lo)dir*=-1}lon=THREE.MathUtils.clamp(lon,-L.lo,L.lo);lat=THREE.MathUtils.clamp(lat,-L.la,L.la);const y=THREE.MathUtils.degToRad(lon),pt=THREE.MathUtils.degToRad(lat);cam.lookAt(Math.sin(y)*Math.cos(pt),Math.sin(pt),-Math.cos(y)*Math.cos(pt));r.render(s,cam);requestAnimationFrame(pano.loop)}};
+  const s=new THREE.Scene();const cam=new THREE.PerspectiveCamera(75,1,.1,200);
+  const mat=new THREE.MeshBasicMaterial({color:0x1c2621});const sph=new THREE.Mesh(new THREE.SphereGeometry(50,96,64).scale(-1,1,1),mat);sph.rotation.y=-Math.PI/2;s.add(sph);
+  const hot=$('#tHot'),map=$('#tMap'),loader=new THREE.TextureLoader(),cache={};
+  map.insertAdjacentHTML('beforeend','<i class="cone" id="tCone"></i>'+TOUR.map(t=>`<b data-r="${t.id}" title="${t.name}" style="left:${t.pin[0]}%;top:${t.pin[1]}%"></b>`).join(''));
+  $('#tRooms').innerHTML=TOUR.map(t=>`<button type="button" data-r="${t.id}">${t.name}</button>`).join('');
+  map.querySelectorAll('b').forEach(b=>b.onclick=()=>{stopAuto();go(b.dataset.r)});$('#tRooms').querySelectorAll('button').forEach(b=>b.onclick=()=>{stopAuto();go(b.dataset.r)});
+  const doorIcon='<svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
+  let yaw=0,pitch=0,drag=null,doors=[],ticket=0,auto=false,autoT=0,idle=0;
+  const tex=id=>cache[id]||(cache[id]=new Promise(res=>loader.load(`pano360/${id}.jpg`,t=>{t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=r.capabilities.getMaxAnisotropy();t.minFilter=THREE.LinearFilter;t.generateMipmaps=false;res(t)},undefined,()=>res(null))));
+  function go(id,from){
+    const rm=TR[id];if(!rm)return;const my=++ticket;$('#tLoad').hidden=false;c.classList.add('fade');
+    tex(id).then(t=>{if(my!==ticket)return;
+      setTimeout(()=>{if(my!==ticket)return;
+        mat.map=t;mat.color.set(t?0xffffff:0x1c2621);mat.needsUpdate=true;$('#tLoad').hidden=true;$('#tLoad').textContent=t?'':'';if(!t){$('#tLoad').hidden=false;$('#tLoad').textContent='صورة هذه الغرفة قيد التجهيز'}
+        pano.cur=rm;$('#tTitle').textContent=rm.name;
+        // face the way we walked in, otherwise the photo's main view
+        yaw=from&&rm.doors[from]!=null?(rm.doors[from]+180)*D2R:0;pitch=0;
+        hot.innerHTML='';doors=Object.keys(rm.doors).map(l=>{const a=rm.doors[l]*D2R,el=document.createElement('button');el.type='button';el.className='door';el.innerHTML=`<i>${doorIcon}</i><span>${TR[l].name}</span>`;el.onclick=()=>{stopAuto();go(l,id)};hot.append(el);
+          return {el,v:new THREE.Vector3(Math.sin(a),-.26,-Math.cos(a)).normalize().multiplyScalar(10)}});
+        map.querySelectorAll('b').forEach(b=>b.classList.toggle('on',b.dataset.r===id));$('#tRooms').querySelectorAll('button').forEach(b=>b.setAttribute('aria-current',b.dataset.r===id));
+        const cone=$('#tCone');cone.style.left=rm.pin[0]+'%';cone.style.top=rm.pin[1]+'%';
+        $('#tRooms').querySelector(`[data-r="${id}"]`).scrollIntoView({block:'nearest',inline:'center'});
+        c.classList.remove('fade');autoT=performance.now();for(const l in rm.doors)tex(l);
+      },from?260:0)});
+  }
+  function stopAuto(){auto=false;$('#tAuto').setAttribute('aria-pressed','false')}
+  const hint=()=>{$('#tHint').style.opacity=0};
+  c.addEventListener('pointerdown',e=>{stopAuto();hint();drag={x:e.clientX,y:e.clientY,yaw,pitch,id:e.pointerId};c.setPointerCapture(e.pointerId);c.style.cursor='grabbing'});
+  c.addEventListener('pointermove',e=>{if(!drag||e.pointerId!==drag.id)return;const k=THREE.MathUtils.degToRad(cam.fov)/c.clientHeight;yaw=drag.yaw-(e.clientX-drag.x)*k;pitch=THREE.MathUtils.clamp(drag.pitch+(e.clientY-drag.y)*k,-1.5,1.5)});
+  const end=()=>{drag=null;c.style.cursor='grab';idle=performance.now()};c.addEventListener('pointerup',end);c.addEventListener('pointercancel',end);
+  const zoom=d=>{cam.fov=THREE.MathUtils.clamp(cam.fov+d,35,100);cam.updateProjectionMatrix()};
+  c.addEventListener('wheel',e=>{e.preventDefault();hint();zoom(e.deltaY*.03)},{passive:false});
+  $('#tIn').onclick=()=>zoom(-10);$('#tOut').onclick=()=>zoom(10);
+  $('#tUp').onclick=()=>{stopAuto();pitch=1.35};$('#tDown').onclick=()=>{stopAuto();pitch=-1.35};
+  $('#tAuto').onclick=()=>{auto=!auto;$('#tAuto').setAttribute('aria-pressed',auto);autoT=performance.now()};
+  $('#tFull').onclick=()=>{const m=$('#panoModal');document.fullscreenElement?document.exitFullscreen():(m.requestFullscreen||m.webkitRequestFullscreen||(()=>{})).call(m)};
+  addEventListener('keydown',e=>{if($('#panoModal').hidden)return;const k={ArrowLeft:[-.12,0],ArrowRight:[.12,0],ArrowUp:[0,.12],ArrowDown:[0,-.12]}[e.key];if(!k)return;e.preventDefault();stopAuto();yaw+=k[0];pitch=THREE.MathUtils.clamp(pitch+k[1],-1.5,1.5)});
+  const ROUTE=['living','dining','kitchen','entry','guestbath','bedroom1','bedroom2','bathroom','bedroom3','terrace'];
+  let last=performance.now();const v=new THREE.Vector3();
+  pano={run:false,cur:null,go,resize(){const w=c.clientWidth,h=c.clientHeight;r.setSize(w,h,false);cam.aspect=w/h;cam.fov=w<700?90:75;cam.updateProjectionMatrix()},
+    loop(){if(!pano.run)return;const now=performance.now(),dt=Math.min(.05,(now-last)/1000);last=now;
+      if(auto){yaw+=dt*.32;pitch*=.97;if(now-autoT>19500){const i=ROUTE.indexOf(pano.cur.id),n=ROUTE[(i+1)%ROUTE.length];autoT=now+1e5;go(n,pano.cur.id)}}
+      else if(!drag&&now-idle>6000&&now-autoT>6000)yaw+=dt*.04;
+      cam.lookAt(Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),-Math.cos(yaw)*Math.cos(pitch));r.render(s,cam);
+      const w=c.clientWidth,h=c.clientHeight;
+      for(const d of doors){v.copy(d.v).project(cam);const on=v.z<1&&Math.abs(v.x)<1.1&&Math.abs(v.y)<1.1;d.el.style.display=on?'':'none';if(on){d.el.style.left=(v.x*.5+.5)*w+'px';d.el.style.top=(-v.y*.5+.5)*h+'px'}}
+      if(pano.cur)$('#tCone').style.transform=`rotate(${THREE.MathUtils.radToDeg(yaw)+(pano.cur.north||0)}deg)`;
+      requestAnimationFrame(pano.loop)}};
   addEventListener('resize',()=>pano&&pano.resize());
 }
 $('#panoClose').onclick=()=>{$('#panoModal').hidden=true;if(pano)pano.run=false};
@@ -778,6 +859,8 @@ function animate(now){
     setTimeout(()=>$('#loader').classList.add('done'),300);
   }catch(err){console.error(err);$('#loadT').textContent='تعذّر تحميل العرض ثلاثي الأبعاد';$('#loadS').textContent='تحقق من الاتصال واستخدم متصفحًا يدعم WebGL، ثم أعد تحميل الصفحة.'}
 })();
+// direct link to the interior tour: #tour or #tour=kitchen
+{const m=location.hash.match(/^#(?:tour|360)(?:=(\w+))?/);if(m){if(m[1]&&TR[m[1]])pano={cur:TR[m[1]]};openPano()}}
 </script>
 
 </body>
