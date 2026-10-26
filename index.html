@@ -383,6 +383,7 @@ import { Sky } from 'three/addons/objects/Sky.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -440,6 +441,7 @@ function stoneSet(){const S=512;const [c,x]=cnv(S,S);x.fillStyle='#e6dccb';x.fil
   const [hc,hx]=cnv(S,S);hx.fillStyle='#bbb';hx.fillRect(0,0,S,S);x.strokeStyle='rgba(110,90,62,.30)';x.lineWidth=2;hx.strokeStyle='#555';hx.lineWidth=3;
   for(let r=0;r<4;r++){const y=r*S/4;[x,hx].forEach(g=>{g.beginPath();g.moveTo(0,y);g.lineTo(S,y);g.stroke()});const off=(r%2)*S/4;for(let k=0;k<3;k++){const xx=(off+k*S/2)%S;[x,hx].forEach(g=>{g.beginPath();g.moveTo(xx,y);g.lineTo(xx,y+S/4);g.stroke()})}}
   noise(hx,S,S,26);return {map:tex(c),normalMap:normalFrom(hc,1.5)}}
+function stucco(){const S=512;const [c,x]=cnv(S,S);x.fillStyle='#ece2d2';x.fillRect(0,0,S,S);blotches(x,S,S,60,'rgba(170,140,100,A)',30,120,.06);noise(x,S,S,16);return tex(c)}
 function flatNoise(base,amt,blot){const S=512;const [c,x]=cnv(S,S);x.fillStyle=base;x.fillRect(0,0,S,S);if(blot)blotches(x,S,S,80,blot,20,120,.18);noise(x,S,S,amt);return tex(c)}
 function paverSet(){const S=512;const [c,x]=cnv(S,S);const [hc,hx]=cnv(S,S);x.fillStyle='#bdb3a2';x.fillRect(0,0,S,S);hx.fillStyle='#000';hx.fillRect(0,0,S,S);
   const tw=S/8,th=S/16;for(let r=0;r<16;r++)for(let k=-1;k<9;k++){const px=k*tw+(r%2)*tw/2,py=r*th,v=180+Math.random()*26;x.fillStyle=`rgb(${v+14},${v+6},${v-10})`;x.fillRect(px+1.5,py+1.5,tw-3,th-3);hx.fillStyle='#ccc';hx.fillRect(px+2,py+2,tw-4,th-4)}
@@ -464,7 +466,7 @@ scene.add(sun,sun.target);
 const hemi=new THREE.HemisphereLight(0xdce6ee,0xb08f64,.4);scene.add(hemi);
 const pmrem=new THREE.PMREMGenerator(renderer);let envRT=null;const roomEnv=pmrem.fromScene(new RoomEnvironment(),.04).texture;
 const SUN=new THREE.Vector3();let dusk=false;
-const U={dusk:{value:0},band:{value:new THREE.Vector2(-999,-998)},cutY:{value:1e9},cutB:{value:new THREE.Vector4()}};
+const U={dusk:{value:0},band:{value:new THREE.Vector2(-999,-998)},cutY:{value:1e9},cutB:{value:new THREE.Vector4()},focus:{value:0},hot:{value:0}};
 const BG_INSIDE=new THREE.Color('#1b2620');
 function setLighting(){
   const elev=dusk?3:24,az=200;SUN.setFromSphericalCoords(1,THREE.MathUtils.degToRad(90-elev),THREE.MathUtils.degToRad(az));
@@ -479,11 +481,11 @@ function setLighting(){
 setProg(.06,'نحضّر الخامات');
 const stone=stoneSet(),paver=paverSet();
 const M={
-  stone:new THREE.MeshStandardMaterial({map:stone.map,normalMap:stone.normalMap,normalScale:new THREE.Vector2(.55,.55),roughness:.92,color:0xeadcc4,envMapIntensity:.45,side:THREE.DoubleSide}),
+  stone:new THREE.MeshStandardMaterial({map:stucco(),roughness:.95,color:0xe9dcc6,envMapIntensity:.45,side:THREE.DoubleSide}),
   roof:new THREE.MeshStandardMaterial({color:0xc9bda8,roughness:.97,envMapIntensity:.4,side:THREE.DoubleSide}),
-  bronze:new THREE.MeshStandardMaterial({color:0x5a4c3d,roughness:.38,metalness:.55,side:THREE.DoubleSide}),
-  darkMetal:new THREE.MeshStandardMaterial({color:0x34312d,roughness:.4,metalness:.6,side:THREE.DoubleSide}),
-  glass:new THREE.MeshPhysicalMaterial({color:0x22302f,roughness:.05,metalness:.2,envMapIntensity:1.5,clearcoat:1,clearcoatRoughness:.04,side:THREE.DoubleSide}),
+  bronze:new THREE.MeshStandardMaterial({color:0x4a3c31,roughness:.55,metalness:.35,side:THREE.DoubleSide}),
+  darkMetal:new THREE.MeshStandardMaterial({color:0x1e1d1c,roughness:.4,metalness:.6,side:THREE.DoubleSide}),
+  glass:new THREE.MeshPhysicalMaterial({color:0x0c0e0e,roughness:.08,metalness:.2,envMapIntensity:.7,clearcoat:1,clearcoatRoughness:.04,side:THREE.DoubleSide}),
   asphalt:new THREE.MeshStandardMaterial({map:flatNoise('#3a3733',24),roughness:.97,envMapIntensity:.3}),
   paving:new THREE.MeshStandardMaterial({map:paver.map,normalMap:paver.normalMap,roughness:.92,color:0xd6c6ab,envMapIntensity:.35}),
   sand:new THREE.MeshStandardMaterial({map:flatNoise('#c9a97e',22,'rgba(150,110,70,A)'),roughness:1,envMapIntensity:.3}),
@@ -503,10 +505,10 @@ M.glass.onBeforeCompile=sh=>{sh.uniforms.uDusk=U.dusk;
   sh.fragmentShader='varying vec3 vWP;uniform float uDusk;\n'+sh.fragmentShader.replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\nvec3 cell=floor(vec3(vWP.x/2.6,vWP.y/3.7,vWP.z/2.6));float hsh=fract(sin(dot(cell,vec3(12.9898,78.233,37.719)))*43758.5453);totalEmissiveRadiance+=uDusk*step(.62,hsh)*vec3(1.0,.66,.36)*.9;');};
 M.glass.customProgramCacheKey=()=>'mk-glass';
 // floor hover band, like the original explorer: tints everything between two heights
-function withBand(m){const prev=m.onBeforeCompile;m.onBeforeCompile=(sh,r)=>{if(prev)prev(sh,r);sh.uniforms.uBand=U.band;sh.uniforms.uCutY=U.cutY;sh.uniforms.uCutB=U.cutB;
+function withBand(m){const prev=m.onBeforeCompile;m.onBeforeCompile=(sh,r)=>{if(prev)prev(sh,r);sh.uniforms.uBand=U.band;sh.uniforms.uCutY=U.cutY;sh.uniforms.uCutB=U.cutB;sh.uniforms.uFocus=U.focus;sh.uniforms.uHot=U.hot;
   if(!sh.vertexShader.includes('vWP;'))sh.vertexShader='varying vec3 vWP;\n'+sh.vertexShader.replace('#include <worldpos_vertex>','#include <worldpos_vertex>\nvWP=(modelMatrix*vec4(transformed,1.0)).xyz;');
   if(!sh.fragmentShader.includes('varying vec3 vWP'))sh.fragmentShader='varying vec3 vWP;\n'+sh.fragmentShader;
-  sh.fragmentShader='uniform vec2 uBand;uniform float uCutY;uniform vec4 uCutB;\n'+sh.fragmentShader.replace('void main() {','void main() {\nif(vWP.y>uCutY&&vWP.x>uCutB.x&&vWP.x<uCutB.y&&vWP.z>uCutB.z&&vWP.z<uCutB.w)discard;').replace('#include <dithering_fragment>','#include <dithering_fragment>\nfloat inB=step(uBand.x,vWP.y)*step(vWP.y,uBand.y);gl_FragColor.rgb=mix(gl_FragColor.rgb,vec3(.86,.62,.34),inB*.55);');};
+  sh.fragmentShader='uniform vec2 uBand;uniform float uCutY;uniform vec4 uCutB;uniform float uFocus;uniform float uHot;\n'+sh.fragmentShader.replace('void main() {','void main() {\nif(vWP.y>uCutY&&vWP.x>uCutB.x&&vWP.x<uCutB.y&&vWP.z>uCutB.z&&vWP.z<uCutB.w)discard;').replace('#include <dithering_fragment>','#include <dithering_fragment>\nfloat inBox=step(uCutB.x,vWP.x)*step(vWP.x,uCutB.y)*step(uCutB.z,vWP.z)*step(vWP.z,uCutB.w);float inB=step(uBand.x,vWP.y)*step(vWP.y,uBand.y)*inBox;gl_FragColor.rgb=mix(gl_FragColor.rgb,vec3(.86,.62,.34),inB*.55);float lum=dot(gl_FragColor.rgb,vec3(.3,.59,.11));gl_FragColor.rgb=mix(gl_FragColor.rgb,vec3(lum)*.7+vec3(.1,.11,.1),uFocus*(1.-inBox)*.72);gl_FragColor.rgb=mix(gl_FragColor.rgb,vec3(.9,.66,.38),uHot*inBox*.38);');};
   const k=m.customProgramCacheKey?m.customProgramCacheKey():'';m.customProgramCacheKey=()=>k+'-band';return m}
 ['stone','roof','bronze','darkMetal','glass'].forEach(k=>withBand(M[k]));
 
@@ -566,16 +568,67 @@ function makePalm(h){
   return g}
 const CAR_COL=[0xf4f4f2,0x1c1d1f,0xb9bcbf,0xd8c9ae,0x2f3e36,0x6a2726,0xc5c6c1,0x3e454a];
 const traffic=[],palms=[];
+/* ───────────────────────── surroundings, after the client's drone photos ─────────────────────────
+   low-rise beige villas behind and beside the compound, open desert with dunes and shrubs across the main road */
+function addSurroundings(){
+  const r2=(s=>()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296})(641);
+  const villaMat=new THREE.MeshStandardMaterial({roughness:.95,envMapIntensity:.35,vertexColors:false});
+  const trimMat=new THREE.MeshStandardMaterial({color:0x3a3632,roughness:.7});
+  const whiteMat=new THREE.MeshStandardMaterial({color:0xf2efe8,roughness:.6,envMapIntensity:.5});
+  const acMat=new THREE.MeshStandardMaterial({color:0xb9b6b0,roughness:.6,metalness:.2});
+  // a villa = ground floor block + set-back upper floor + roof parapets, merged into one geometry per variant
+  const bx=(w,h,d,x,y,z)=>new THREE.BoxGeometry(w,h,d).translate(x,y+h/2,z);
+  const variants=[];
+  for(let v=0;v<5;v++){const W=11+v%3*1.5,D=15+(v%2)*3,H1=3.6,H2=3.4;const parts=[bx(W,H1*2,D,0,0,0),bx(W+.3,.9,D+.3,0,H1*2,0)];
+    const uw=W*(.45+.1*(v%3)),ud=D*.5;parts.push(bx(uw,H2,ud,(W-uw)/2-.4,H1*2,-(D-ud)/2+.4),bx(uw+.25,.6,ud+.25,(W-uw)/2-.4,H1*2+H2,-(D-ud)/2+.4));
+    if(v%2)parts.push(bx(W*.35,H1*2+1.2,1.2,-W*.25,0,D/2+.4));
+    variants.push(mergeGeometries(parts))}
+  const lots=[];const site={x0:-12,x1:132,z0:-74,z1:14};
+  const addBlock=(x0,z0,cols,rows,face)=>{for(let i=0;i<cols;i++)for(let j=0;j<rows;j++){const x=x0+i*17+r2()*1.5,z=z0-j*24;lots.push({x,z,v:Math.floor(r2()*5),ry:(face?0:Math.PI)+(r2()<.15?Math.PI/2:0)})}};
+  // villa blocks: behind the compound and along both sides, separated by streets
+  for(let bxI=-3;bxI<9;bxI++)for(let bzI=0;bzI<6;bzI++){const x0=-40+bxI*72,z0=-92-bzI*62;if(r2()<.3)continue;addBlock(x0,z0,3+Math.floor(r2()*2),2,bzI%2)}
+  for(let bzI=0;bzI<2;bzI++){addBlock(-120,-10-bzI*48,4,2,1);addBlock(150,-10-bzI*48,4,2,0)}
+  const cols=[0xe2cfb0,0xd9c4a3,0xeadcc4,0xd2bc98,0xe6d5b8];
+  for(let v=0;v<5;v++){const list=lots.filter(l=>l.v===v);if(!list.length)continue;const im=new THREE.InstancedMesh(variants[v],villaMat,list.length);const m4=new THREE.Matrix4(),q=new THREE.Quaternion(),c=new THREE.Color();
+    list.forEach((l,i)=>{q.setFromAxisAngle(new THREE.Vector3(0,1,0),l.ry);m4.compose(new THREE.Vector3(l.x,-.42,l.z),q,new THREE.Vector3(1,1,1));im.setMatrixAt(i,m4);im.setColorAt(i,c.setHex(cols[Math.floor(r2()*cols.length)]))});
+    im.castShadow=true;im.receiveShadow=true;extras.add(im)}
+  // windows as dark bands, boundary walls, roof tanks and AC units
+  const band=[],walls=[],tanks=[],acs=[];
+  for(const l of lots){const W=11+l.v%3*1.5,D=15+(l.v%2)*3;const s=Math.sin(l.ry),c=Math.cos(l.ry);const P=(lx,lz)=>[l.x+lx*c+lz*s,l.z-lx*s+lz*c];
+    for(const fl of [1.4,5]){for(const sd of [1,-1]){const [x,z]=P(0,sd*(D/2+.02));band.push([x,fl,z,W*.62,1.3,.06,l.ry]);const [x2,z2]=P(sd*(W/2+.02),0);band.push([x2,fl,z2,.06,1.3,D*.5,l.ry])}}
+    const [wx,wz]=P(0,D/2+4.5);walls.push([wx,1.1,wz,W+3,2.2,.25,l.ry]);
+    for(let k=0;k<2;k++){const [x,z]=P(-W/2+1.4+k*1.6,-D/2+1.4);tanks.push([x,7.4,z])}
+    for(let k=0;k<3;k++){const [x,z]=P(W/2-1.2-k*1.1,D/2-1.6);acs.push([x,7.6,z,l.ry])}}
+  const inst=(geo,mat,arr,fn)=>{const im=new THREE.InstancedMesh(geo,mat,arr.length);const m4=new THREE.Matrix4(),q=new THREE.Quaternion();arr.forEach((a,i)=>{fn(a,m4,q);im.setMatrixAt(i,m4)});im.castShadow=true;im.receiveShadow=true;extras.add(im);return im};
+  const unit=new THREE.BoxGeometry(1,1,1);
+  inst(unit,trimMat,band,(a,m4,q)=>{q.setFromAxisAngle(new THREE.Vector3(0,1,0),a[6]);m4.compose(new THREE.Vector3(a[0],a[1],a[2]),q,new THREE.Vector3(a[3],a[4],a[5]))});
+  inst(unit,villaMat,walls,(a,m4,q)=>{q.setFromAxisAngle(new THREE.Vector3(0,1,0),a[6]);m4.compose(new THREE.Vector3(a[0],a[1]-.42,a[2]),q,new THREE.Vector3(a[3],a[4],a[5]))});
+  inst(new THREE.SphereGeometry(.75,14,10),whiteMat,tanks,(a,m4,q)=>{q.identity();m4.compose(new THREE.Vector3(a[0],a[1],a[2]),q,new THREE.Vector3(1,.95,1))});
+  inst(unit,acMat,acs,(a,m4,q)=>{q.setFromAxisAngle(new THREE.Vector3(0,1,0),a[3]);m4.compose(new THREE.Vector3(a[0],a[1],a[2]),q,new THREE.Vector3(.9,.7,.4))});
+  // water tanks on the compound roofs, as in the photos
+  const roofTanks=[];for(const b of LETTERS){const r=roots[b];if(!r)continue;const bb=new THREE.Box3().setFromObject(r);const c=bb.getCenter(new THREE.Vector3());
+    for(let k=0;k<4;k++)roofTanks.push([c.x-6+(k%2)*1.7+(k>1?9:0),bb.max.y-.15,c.z+(faceOf(b)>0?-6:6)])}
+  inst(new THREE.SphereGeometry(.8,16,12),whiteMat,roofTanks,(a,m4,q)=>{q.identity();m4.compose(new THREE.Vector3(a[0],a[1],a[2]),q,new THREE.Vector3(1,1.05,1))});
+  // desert: a wide sand field with low dunes that grow away from the built area, plus scattered dry shrubs
+  const S=3600,N=220;const g=new THREE.PlaneGeometry(S,S,N,N);g.rotateX(-Math.PI/2);const p=g.attributes.position;const col=new Float32Array(p.count*3);
+  const n2=(x,z)=>Math.sin(x*.021+Math.sin(z*.013)*2)*Math.cos(z*.017+Math.sin(x*.011))+.5*Math.sin(x*.053+z*.041)*Math.cos(z*.047-x*.023);
+  for(let i=0;i<p.count;i++){const x=p.getX(i)+SITE_C.x,z=p.getZ(i)+SITE_C.z;
+    const dFront=z-40,dBack=-z-460,dSide=Math.abs(x-SITE_C.x)-480;const far=Math.max(dFront,dBack,dSide);const k=THREE.MathUtils.smoothstep(far,0,180);
+    const h=k*(3.2+3*n2(x,z))*Math.max(0,.6+.4*n2(x*.5,z*.5));p.setY(i,-.6+Math.max(0,h));
+    const t=.92+.08*n2(x*2.3,z*2.1);col[i*3]=.86*t;col[i*3+1]=.74*t;col[i*3+2]=.57*t}
+  g.setAttribute('color',new THREE.BufferAttribute(col,3));g.computeVertexNormals();g.translate(SITE_C.x,0,SITE_C.z);
+  const desert=new THREE.Mesh(g,new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,envMapIntensity:.3}));desert.receiveShadow=true;extras.add(desert);
+  const shrubs=[];for(let i=0;i<2600;i++){const x=SITE_C.x+(r2()-.5)*1600,z=60+r2()*900;shrubs.push([x,z,.5+r2()*1.1])}
+  for(let i=0;i<600;i++){const x=SITE_C.x+(r2()-.5)*1600,z=-480-r2()*500;shrubs.push([x,z,.5+r2()*1.1])}
+  inst(new THREE.IcosahedronGeometry(1,0),new THREE.MeshStandardMaterial({color:0x7a6a4c,roughness:1,flatShading:true}),shrubs,(a,m4,q)=>{q.identity();m4.compose(new THREE.Vector3(a[0],-.4+a[2]*.25,a[1]),q,new THREE.Vector3(a[2]*1.2,a[2]*.55,a[2]))});
+}
 function addStreetLife(){
   // date palms where the original had olive trees, plus street lamps along both streets
   palms.length=0;for(let x=4;x<118;x+=12)for(const z of [5.2,-67.2]){const p=makePalm(5.2+Math.random()*1.8);p.position.set(x,-.45,z);p.rotation.y=Math.random()*6;p.userData.z=z;extras.add(p);palms.push(p)}
   const poles=[],heads=[];for(let x=-6;x<=126;x+=22)for(const z of [6.5,-68.5]){poles.push(new THREE.BoxGeometry(.18,7,.18).translate(x,3,z));heads.push(new THREE.BoxGeometry(.5,.18,.9).translate(x,6.4,z+(z>0?.6:-.6)))}
   const merge=(arr,m)=>{arr.forEach(g=>{const mesh=new THREE.Mesh(g,m);mesh.castShadow=true;extras.add(mesh)})};merge(poles,M.lampPole);merge(heads,M.lampHead);
   if(sedan){const spots=[5,22,40,62,85,109];spots.forEach((x,i)=>{car(x,8,Math.PI/2,i);car(x+1,-70,-Math.PI/2,i+1)});car(26,15,Math.PI,1,true);car(92,-78,0,0,true)}
-  // neighbouring low-rise blocks so the compound sits in a city
-  const r2=(s=>()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296})(64);const g=new THREE.BoxGeometry(1,1,1);const list=[];
-  for(let i=0;i<200;i++){const a=r2()*Math.PI*2,d=190+r2()*700,x=SITE_C.x+Math.cos(a)*d,z=SITE_C.z+Math.sin(a)*d;const w=18+r2()*26,dd=16+r2()*22,h=7+Math.floor(r2()*4)*3.5;list.push([x,h/2-.4,z,w,h,dd])}
-  const im=new THREE.InstancedMesh(g,M.city,list.length);const m4=new THREE.Matrix4();list.forEach((t,i)=>{m4.compose(new THREE.Vector3(t[0],t[1],t[2]),new THREE.Quaternion(),new THREE.Vector3(t[3],t[4],t[5]));im.setMatrixAt(i,m4)});im.castShadow=true;im.receiveShadow=true;extras.add(im);
+
 }
 function car(x,z,angle,i,moving=false){
   const g=sedan.scene.clone(true);g.position.set(x,-.39,z);g.rotation.y=angle;
@@ -709,7 +762,7 @@ function mount(stage){
   if(complex)complex.visible=!inside||stage==='floor';
   // every building stays in view; the floor stage cuts away only the chosen building above the chosen floor
   const cutting=stage==='floor';const cc=centerOf(st.b);
-  U.cutY.value=cutting?st.f*FH+.05:1e9;U.cutB.value.set(cc.x-14.68,cc.x+14.68,cc.z-13.6,cc.z+13.6);
+  U.cutY.value=cutting?st.f*FH+.05:1e9;U.focus.value=stage==='building'||stage==='floor'?1:0;U.cutB.value.set(cc.x-14.68,cc.x+14.68,cc.z-13.6,cc.z+13.6);
   for(const b of LETTERS){if(roots[b])roots[b].visible=stage!=='unit';(buildingMeshes[b]||[]).forEach(o=>o.castShadow=!(cutting&&b===st.b))}
   complex&&complex.traverse(o=>{if(o.isMesh&&o.userData.logo)o.visible=!(cutting&&o.userData.building===st.b)});
   if(urban)urban.visible=stage!=='unit';extras.visible=stage!=='unit';
@@ -751,8 +804,8 @@ function go(stage,o={}){Object.assign(st,o);if(stage==='floor'||stage==='unit'||
 function pickUnit(i){const u=unitInfo(st.b,st.f,i);if(u.status==='sold'){toast(`الشقة ${u.id} مباعة في بيانات العرض`);return}go('unit',{u:i})}
 
 /* ───────────────────────── hover ───────────────────────── */
-function setHover(h){st.hover=h;U.band.value.set(-999,-998);hlBox.visible=false;
-  if(h&&h.kind==='building'&&st.stage==='complex'){hlBox.position.copy(centerOf(h.id));hlBox.scale.set(29.1,15.1,27);hl.material.opacity=.1;hlBox.visible=true}
+function setHover(h){st.hover=h;U.band.value.set(-999,-998);hlBox.visible=false;U.hot.value=0;
+  if(h&&h.kind==='building'&&st.stage==='complex'){const c=centerOf(h.id);U.cutB.value.set(c.x-14.68,c.x+14.68,c.z-13.6,c.z+13.6);U.hot.value=1;hlBox.position.copy(centerOf(h.id));hlBox.scale.set(29.1,15.1,27);hl.material.opacity=.1;hlBox.visible=true}
   if(h&&h.kind==='floor'&&st.stage==='building'){const c=centerOf(st.b);U.band.value.set(h.id*FH+.1,h.id*FH+FH);hlBox.position.set(c.x,1.9+h.id*FH,c.z);hlBox.scale.set(29.2,3.6,27);hl.material.opacity=.16;hlBox.visible=true}
   if(h&&h.kind==='unit'&&st.stage==='floor'){const c=centerOf(st.b),i=h.id,back=i>3,col=(i-1)%3;hlBox.position.set(c.x-11.2+col*11.2,st.f*FH+1.5,c.z+(back?7.2:-7.2));hlBox.scale.set(10.3,2.9,10.9);hl.material.opacity=.14;hlBox.visible=true}
   labels.forEach(l=>{const k=l.el.dataset;l.el.classList.toggle('hot',false)});
@@ -797,13 +850,14 @@ function render(){
 const ray=new THREE.Raycaster(),ndc=new THREE.Vector2();let down=null;
 function pick(e){const r=canvas.getBoundingClientRect();ndc.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(ndc,camera);
   if(st.stage==='complex'&&complex){const list=[];LETTERS.forEach(b=>buildingMeshes[b]&&list.push(...buildingMeshes[b]));const h=ray.intersectObjects(list,false)[0];return h?{kind:'building',id:h.object.userData.building}:null}
-  if(st.stage==='building'){const h=ray.intersectObjects(floorProxies.children,false)[0];return h?{kind:'floor',id:h.object.userData.floor}:null}
+  if(st.stage==='building'){const h=ray.intersectObjects(floorProxies.children,false)[0];if(h)return {kind:'floor',id:h.object.userData.floor};
+    const list=[];LETTERS.forEach(b=>b!==st.b&&buildingMeshes[b]&&list.push(...buildingMeshes[b]));const o=ray.intersectObjects(list,false)[0];return o?{kind:'other',id:o.object.userData.building}:null}
   if(st.stage==='floor'){const h=ray.intersectObjects(aptPicks,false)[0];return h?{kind:'unit',id:h.object.userData.unit}:null}return null}
 canvas.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY};controls.autoRotate=false;tog($('#cSpin'),false)});
 canvas.addEventListener('pointermove',e=>{lastPtr={x:e.clientX,y:e.clientY};if(e.pointerType!=='mouse'||e.buttons||tween)return;const h=pick(e);const k=h?h.kind+h.id:'',k0=st.hover?st.hover.kind+st.hover.id:'';if(k!==k0||h)setHover(h);canvas.style.cursor=h?'pointer':'grab'});
 canvas.addEventListener('pointerleave',()=>setHover(null));
 canvas.addEventListener('pointerup',e=>{if(!down)return;const m=Math.hypot(e.clientX-down.x,e.clientY-down.y);down=null;if(m>6||tween)return;const h=pick(e);if(!h)return;
-  if(h.kind==='building')go('building',{b:h.id});else if(h.kind==='floor')go('floor',{f:h.id});else pickUnit(h.id)});
+  if(h.kind==='building'||h.kind==='other')go('building',{b:h.id});else if(h.kind==='floor')go('floor',{f:h.id});else pickUnit(h.id)});
 
 /* ───────────────────────── controls ───────────────────────── */
 function tog(el,v){el.setAttribute('aria-pressed',v?'true':'false')}
@@ -951,7 +1005,7 @@ function animate(now){
     setProg(.7,'نجهّز الخامات والإضاءة');
     prepComplex(cx);aptModel=ap;logoModel=lg;addFacadeLogos();
     const [ur,se]=await Promise.all([loadModel('urban').catch(()=>null),loadModel('sedan').catch(()=>null)]);
-    if(ur)prepUrban(ur);sedan=se;addStreetLife();
+    if(ur)prepUrban(ur);sedan=se;addStreetLife();addSurroundings();
     setProg(1,'لحظات ونبدأ');
     mount('complex');
     // deep link to an apartment, e.g. #unit=C-202
